@@ -15,6 +15,9 @@ function List() {
     }
 
     const saveHandler = ()=>{
+
+        if(!input.trim()) return
+        
         if(editToggle){
             setNotes(notes.map((note)=>(
                 note.id === editToggle ? {...note, text: input} : note
@@ -37,18 +40,11 @@ function List() {
         const newNotes = notes.filter(n => n.id !== id)
         setNotes(newNotes)
     }
+
     useEffect(()=>{
-        const raw = localStorage.getItem("Notes");
-        let data;
+        const raw = JSON.parse(localStorage.getItem("Notes")) || [];
         
-        try {
-          data = raw ? JSON.parse(raw) : [];   // parse only if raw is truthy
-        } catch (err) {
-          console.error("Corrupted data in localStorage:", err);
-          data = [];                           // fallback if JSON is invalid
-        }
-        
-        setNotes(data);
+        setNotes(raw);
         setIsLoaded(true); // data has been loaded
     },[])
 
