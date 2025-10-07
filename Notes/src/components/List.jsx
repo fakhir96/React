@@ -1,12 +1,11 @@
 import {React, useEffect, useState} from 'react'
 import CreateNote from './CreateNote'
 import Note from './Note';
-// import './notes.css'
 
 function List() {
     const [input, setInput] = useState("")
     const [notes, setNotes] = useState([])
-    const [isLoaded, setIsLoaded] = useState(false); // NEW
+    const [isLoaded, setIsLoaded] = useState(false);
     const [editToggle, setEditToggle] = useState(null);
 
     const editHandler = (id, text)=>{
@@ -45,7 +44,7 @@ function List() {
         const raw = JSON.parse(localStorage.getItem("Notes")) || [];
         
         setNotes(raw);
-        setIsLoaded(true); // data has been loaded
+        setIsLoaded(true);
     },[])
 
     useEffect(()=>{
