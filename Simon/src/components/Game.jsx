@@ -4,69 +4,134 @@ import Enote from '../assets/Enote.mp3';
 import Note from '../assets/Note.mp3';
 import e5note from '../assets/e5-piano-note.mp3';
 
-const Game = ({start}) => {
+const Game = ({start, setScore, restart }) => {
     
-    const [activeBtn, setActiveBtn] = useState(null); // for highlighting
-    const [current, setCurrent] = useState(null);
-    const [round, setRound] = useState(0);
+    const [sequence, setSequence] = useState([]) // full generated sequence
+    const [userIndex, setUserIndex] = useState(0) // track where user is in the sequence
+    const [activeBtn, setActiveBtn] = useState(null) // for highlight animation
+    const [isPlaying, setIsPlaying] = useState(false) // to block clicks during playback
 
-    const playSound1 = () => new Audio(Cnote).play();
-    const playSound2 = () => new Audio(Enote).play();
-    const playSound3 = () => new Audio(Note).play();
-    const playSound4 = () => new Audio(e5note).play();
 
+    // Sound setup
     const buttons = [
-        { id: 0, color: 'bg-red-600', rounded: 'rounded-tl-full', sound: playSound1 },
-        { id: 1, color: 'bg-yellow-500', rounded: 'rounded-tr-full', sound: playSound2 },
-        { id: 2, color: 'bg-green-400', rounded: 'rounded-bl-full', sound: playSound3 },
-        { id: 3, color: 'bg-blue-600', rounded: 'rounded-br-full', sound: playSound4 },
-    ];
+        { id: 0, color: 'bg-red-600', rounded: 'rounded-tl-full', sound: () => new Audio(Cnote).play() },
+        { id: 1, color: 'bg-yellow-500', rounded: 'rounded-tr-full', sound: () => new Audio(Enote).play() },
+        { id: 2, color: 'bg-green-400', rounded: 'rounded-bl-full', sound: () => new Audio(Note).play() },
+        { id: 3, color: 'bg-blue-600', rounded: 'rounded-br-full', sound: () => new Audio(e5note).play() },
+    ]
 
-    useEffect(()=>{
-
-        if(!start) return
-
-        let val = Math.floor(Math.random() * 4);
+    // Start game or next round
+    useEffect(() => {
+        if (!start) return
         
-        setCurrent(val)
-        setActiveBtn(val); // 1️⃣ Highlight that button 
-        buttons[val].sound(); // Play a sound for random button
+        startNewGame()
+    }, [start])
 
-        const timer = setTimeout(() => setActiveBtn(null), 500);
-        return () => clearTimeout(timer);
-        
-    }, [start, round])
+    // Restart Game
+    useEffect(() => {
+        if (!start) return
+      
+        setSequence([])
+        setUserIndex(0)
+        setIsPlaying(false)
+        setActiveBtn(null)
+        setScore(0)
+      
+        const timer = setTimeout(() => addNewStep([]), 500)
+        return () => clearTimeout(timer)
+    }, [restart])
+      
 
+    
+    // Start the game
+    const startNewGame = () => {
+        setSequence([]) 
+        setScore(0)
+        setUserIndex(0)
+        addNewStep([])
+    }
+    
+    
+    // Add a random step to the sequence
+    const addNewStep = (prevSeq) => {
+        const next = Math.floor(Math.random() * 4)
+        const newSeq = [...prevSeq, next]
+        setSequence(newSeq)
+        playSequence(newSeq)
+    }
 
-    const checkSound = (id)=>{
-        console.log("User Clicked Box: "+id)
+    // Play the full sequence
+    const playSequence = async (seq) => {
+        setIsPlaying(true)
+        for (let i = 0; i < seq.length; i++) {
+            await highlightButton(seq[i])
+        }
+        setIsPlaying(false)
+    }
 
-        if(current === id){
-            console.log("Correct Button Clicked")
-            buttons[id].sound()
-
+    // Flash + play sound
+    const highlightButton = (id) => {
+        return new Promise((resolve) => {
+        setTimeout(() => {
             setActiveBtn(id)
-            setTimeout(() => setActiveBtn(null), 300);
+            buttons[id].sound()
+            setTimeout(() => {
+                setActiveBtn(null)
+                setTimeout(resolve, 250)
+            }, 400)
+        }, 400)
+        })
+    }
 
-            // move to next round
-            setTimeout(() => setRound(prev => prev + 1), 800);
-        }   
-    }   
+    // Handle user clicks
+    const handleUserClick = (id) => {
+        if (isPlaying || sequence.length === 0) return // block during playback
+
+        if (id === sequence[userIndex]) {
+            // Correct click
+            buttons[id].sound()
+            setActiveBtn(id)
+            setTimeout(() => setActiveBtn(null), 300)
+
+            if (userIndex + 1 === sequence.length) {
+                // Round complete 
+                setScore((prev) => prev + 1)
+                setTimeout(() => addNewStep(sequence), 700)
+                setUserIndex(0)
+            } 
+            else {
+                // Move to next user step
+                setUserIndex((prev) => prev + 1)
+            }
+        } 
+        else {
+            // Wrong click
+            alert('Game Over!')
+            setSequence([])
+            setUserIndex(0)
+            setScore(0)
+        }
+    }
 
     return (
-        <div className='w-[40%] h-[58%] grid grid-cols-2 gap-4'>
+        <div className='w-[80vw] max-w-[400px] aspect-square grid grid-cols-2 gap-4'>
             {buttons.map((btn) => (
                 <button
-                    key={btn.id}
-                    id={btn.id}
-                    onClick={() => checkSound(btn.id)}
-                    className={`w-full transition duration-200 ${btn.rounded} ${
-                        activeBtn === btn.id ? 'bg-amber-100' : btn.color
-                    }`}>
+                key={btn.id}
+                onClick={() => handleUserClick(btn.id)}
+                className={`
+                    transition duration-200 
+                    ${btn.rounded} 
+                    ${activeBtn === btn.id ? 'bg-amber-100' : btn.color}
+                    w-full h-full
+                    sm:p-4 md:p-6 lg:p-8 
+                    shadow-md active:scale-95`}
+                >
                 </button>
             ))}
         </div>
+        
     )
 }
 
-export default Game
+export default Game;
